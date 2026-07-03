@@ -952,40 +952,50 @@ static VertexFormat buf_fmt;
 static int buf_count;
 
 // Precalculate all the vertex data adjustment
+static CC_INLINE PackedCol PackTexturedColor(PackedCol color) {
+	// See 'Colour Functions' https://psi-rockin.github.io/ps2tek/#gstextures
+	// Essentially, colour blending is calculated as
+	//   finalR = (vertexR * textureR) >> 7
+	// However, this behaves contrary to standard expectations
+	//  and results in final vertex colour being too bright
+	//
+	// For instance, if vertexR was white and textureR was grey:
+	//   finalR = (255 * 127) / 128 = 255
+	// White would be produced as the final colour instead of expected grey
+	//
+	// To counteract this, just divide all vertex colours by 2 first
+	color = (color & 0xFEFEFEFE) >> 1;
+
+	// Alpha blending divides by 128 instead of 256, so need to half alpha here
+	//  so that alpha blending produces the expected results like normal GPUs
+	int A = PackedCol_A(color) >> 1;
+	return (color & ~PACKEDCOL_A_MASK) | (A << PACKEDCOL_A_SHIFT);
+}
+
 static void PreprocessTexturedVertices(void* vertices) {
     struct VertexTextured* v = vertices;
+	int count = buf_count;
 
-    for (int i = 0; i < buf_count; i++, v++)
+    for (int i = 0; i < count; i++, v++)
     {
-		// See 'Colour Functions' https://psi-rockin.github.io/ps2tek/#gstextures
-		// Essentially, colour blending is calculated as
-		//   finalR = (vertexR * textureR) >> 7
-		// However, this behaves contrary to standard expectations
-		//  and results in final vertex colour being too bright
-		//
-		// For instance, if vertexR was white and textureR was grey:
-		//   finalR = (255 * 127) / 128 = 255
-		// White would be produced as the final colour instead of expected grey
-		//
-		// To counteract this, just divide all vertex colours by 2 first
-		v->Col = (v->Col & 0xFEFEFEFE) >> 1;
-
-		// Alpha blending divides by 128 instead of 256, so need to half alpha here
-		//  so that alpha blending produces the expected results like normal GPUs
-		int A = PackedCol_A(v->Col) >> 1;
-		v->Col = (v->Col & ~PACKEDCOL_A_MASK) | (A << PACKEDCOL_A_SHIFT);
+		v->Col = PackTexturedColor(v->Col);
     }
+}
+
+static CC_INLINE PackedCol PackColoredColor(PackedCol color) {
+	// Alpha blending divides by 128 instead of 256, so need to half alpha here
+	//  so that alpha blending produces the expected results like normal GPUs
+	int A = PackedCol_A(color) >> 1;
+	return (color & ~PACKEDCOL_A_MASK) | (A << PACKEDCOL_A_SHIFT);
 }
 
 static void PreprocessColouredVertices(void* vertices) {
     struct VertexColoured* v = vertices;
+	int count = buf_count;
 
-    for (int i = 0; i < buf_count; i++, v++)
+    for (int i = 0; i < count; i++, v++)
     {
-		// Alpha blending divides by 128 instead of 256, so need to half alpha here
-		//  so that alpha blending produces the expected results like normal GPUs
-		int A = PackedCol_A(v->Col) >> 1;
-		v->Col = (v->Col & ~PACKEDCOL_A_MASK) | (A << PACKEDCOL_A_SHIFT);
+		v->Col = PackColoredColor(v->Col);
     }
 }
 
@@ -1034,7 +1044,7 @@ static void Update_MVP(void) {
 	{
 		Mem_Copy(q, &_mvp, sizeof(struct Matrix)); q += 4;
 	}
-	// TODO actually execute reloadMVP program
+	PACK_VIFTAG_SINGLE(q, VIF_CALL(vu1_reloadMVP)); q++; // TODO does this work?
 	Q = q;
 }
 
