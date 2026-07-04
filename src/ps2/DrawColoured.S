@@ -77,7 +77,7 @@
 //	$a1 = addresss of dst  vertices
 //   $a2 = address of  tmp  vertex
 //	$v0 = address of final vertices (return value)
-BEG_FUNC(DrawColouredQuad)
+BEG_FUNC(DrawColouredQuad3D)
 
 ### VERTEX 1 ###
 	lqc2		POS_1, 0x00(SRC)
@@ -206,4 +206,4 @@ BEG_FUNC(DrawColouredQuad)
 any_clipped_vertices:
 	jr $ra
 	move $v0, DST
-END_FUNC(DrawColouredQuad)
+END_FUNC(DrawColouredQuad3D)

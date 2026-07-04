@@ -2,24 +2,12 @@
 // mips ISA has explicit delay slots
 // (i.e. instruction after branches/jumps are always unconditionally executed)
 #include "AsmCommon.i"
-// NOTE: vclipw.xyz takes 4 cycles to produce result, which must be accounted for
-
-// Note that registers are numbered for N32 ABI, but when disassembling
-//   in ghidra or PCSX2, they are disassembled as O32 ABI ?
-// https://github.com/ps2dev/binutils-gdb/blob/e9cf3691bfa140469d52815a2307b00eecf7917c/gas/config/tc-mips.c#L2786
 
 # transform temp registers
-	#define POSCL $vf27 // TRANSFORMED(POS_[1234]) * CLIP_PLANES_ADJUST
 	#define POS_1 $vf28 // vertex 1 position
 	#define POS_2 $vf29 // vertex 2 position
 	#define POS_3 $vf30 // vertex 3 position
 	#define POS_4 $vf31 // vertex 4 position
-
-	#define _one   $vf0w
-	#define POS1w $vf28w
-	#define POS2w $vf29w
-	#define POS3w $vf30w
-	#define POS4w $vf31w
 
 	#define SRC $a0
 	#define DST $a1
@@ -68,12 +56,6 @@
 	vmaddz		\vpos, MVP3, \vpos # VEC[xyzw] = ACC[xyzw] + mvp.row2[xyzw] * VEC.z
 .endm
 
-.macro BeginClip vpos
-	vmul		POSCL, \vpos, CL_F  # TMP = TRANSFORMED(VEC) * CLIP_PLANES_ADJUST
-	# begin clip flags calculation
-	vclipw.xyz	POSCL, POSCL    	# CLIP_FLAGS.append(CLIP(TMP.xyz, TMP.w))
-.endm
-
 .macro VPTransform vpos
 	vmulw.xyz	\vpos, \vpos, \vpos # TMP.xyz = IN.xyz * IN.w (inverse W)
 	vmul.xyz	\vpos, \vpos, VP_S  # TMP.xyz = TMP * viewport_scale
@@ -86,7 +68,7 @@
 //	$a1 = addresss of dst  vertices
 //  $a2 = address of  tmp  vertex
 //	$v0 = address of final vertices (return value)
-BEG_FUNC(DrawTexturedQuad3D)
+BEG_FUNC(DrawTexturedQuad2D)
 
 ### VERTEX 1 ###
 	lqc2		POS_1, 0x00(SRC)
@@ -95,8 +77,6 @@ BEG_FUNC(DrawTexturedQuad3D)
 	lwc1		COL1, 0x0C(SRC)
 	lwc1		U_1,  0x10(SRC)
 	lwc1		V_1,  0x14(SRC)
-	vdiv	 	$Q,   _one, POS1w
-	BeginClip POS_1
 
 ### VERTEX 2 ###
 	lqc2		POS_2, 0x20(SRC)
@@ -106,10 +86,6 @@ BEG_FUNC(DrawTexturedQuad3D)
 	lwc1		U_2,   0x18(SRC)
 	lwc1		V_2,   0x1C(SRC)
 
-	vmulq.w 	POS_1, V0001, $Q
-	vdiv	 	$Q,    _one, POS2w
-	BeginClip POS_2
-
 ### VERTEX 3 ###
 	lqc2		POS_3, 0x30(SRC)
 
@@ -118,10 +94,6 @@ BEG_FUNC(DrawTexturedQuad3D)
 	lwc1		U_3,   0x40(SRC)
 	lwc1		V_3,   0x44(SRC)
 
-	vmulq.w 	POS_2, V0001, $Q
-	vdiv 		$Q,    _one, POS3w
-	BeginClip POS_3
-
 ### VERTEX 4 ###
 	lqc2		POS_4, 0x50(SRC)
 
@@ -129,23 +101,6 @@ BEG_FUNC(DrawTexturedQuad3D)
 	lwc1		COL4,  0x5C(SRC)
 	lwc1		U_4,   0x48(SRC)
 	lwc1		V_4,   0x4C(SRC)
-
-	vmulq.w 	POS_3, V0001, $Q
-	vdiv 		$Q,    _one, POS4w
-	BeginClip POS_4
-
-	vnop # adjust for delay
-	vnop # adjust for delay
-	vnop # adjust for delay
-
-	# STORE CLIP FLAGS 4 RESULT
-	vwaitq
-	vmulq.w 	POS_4, V0001, $Q
-
-	# check if any vertices would need clipping
-	cfc2 		$t0, $18 # t0 = VP0_REGS[CLIP_FLAGS]
-	bnez 		$t0, any_clipped_vertices
-	nop
 
 	# output vertices
 	VPTransform POS_1
@@ -166,36 +121,28 @@ BEG_FUNC(DrawTexturedQuad3D)
 
 	lhu			XY_2, 0x10(TMP)
 	lhu			 Y_2, 0x14(TMP)
-	mul.s		 U_1, U_1, W_1
 	lwc1		 Z_2, 0x18(TMP)
 	lwc1		 W_2, 0x1C(TMP)
-	mul.s		 V_1, V_1, W_1
 
 	lhu			XY_3, 0x20(TMP)
 	lhu			 Y_3, 0x24(TMP)
-	mul.s		 U_2, U_2, W_2
 	lwc1		 Z_3, 0x28(TMP)
 	lwc1		 W_3, 0x2C(TMP)
-	mul.s		 V_2, V_2, W_2
 
 	lhu			XY_4, 0x30(TMP)
 	lhu			 Y_4, 0x34(TMP)
-	mul.s		 U_3, U_3, W_3
 	lwc1		 Z_4, 0x38(TMP)
 	lwc1		 W_4, 0x3C(TMP)
-	mul.s		 V_3, V_3, W_3
 
 	sll 		Y_1, Y_1, 16
 	sll			Y_2, Y_2, 16
 	sll 		Y_3, Y_3, 16
 	sll 		Y_4, Y_4, 16
-	mul.s		U_4, U_4, W_4
 
 	or			XY_1, XY_1, Y_1
 	or			XY_2, XY_2, Y_2
 	or			XY_3, XY_3, Y_3
 	or			XY_4, XY_4, Y_4
-	mul.s		 V_4,  V_4, W_4
 
 	# write 1,2,3 3,4,1
 	swc1 COL1, (0*S_PTEX + PTEX__C)(DST)
@@ -242,8 +189,6 @@ BEG_FUNC(DrawTexturedQuad3D)
 
 	addi DST, 6 * S_PTEX
 
-	# TODO clipping
-any_clipped_vertices:
 	jr $ra
 	move $v0, DST
-END_FUNC(DrawTexturedQuad3D)
+END_FUNC(DrawTexturedQuad2D)

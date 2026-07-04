@@ -1153,10 +1153,11 @@ void Gfx_SetVertexFormat(VertexFormat fmt) {
 	formatDirty = true;
 }
 
-extern u64* DrawTexturedQuad(void* src, u64* dst, VU0_vector* tmp);
-extern u64* DrawColouredQuad(void* src, u64* dst, VU0_vector* tmp);
+extern u64* DrawTexturedQuad2D(void* src, u64* dst, VU0_vector* tmp);
+extern u64* DrawTexturedQuad3D(void* src, u64* dst, VU0_vector* tmp);
+extern u64* DrawColouredQuad3D(void* src, u64* dst, VU0_vector* tmp);
 
-static qword_t* DrawTexturedTriangles(qword_t* q, int verticesCount, int startVertex) {
+static qword_t* DrawTexturedTriangles2D(qword_t* q, int quadsCount, int startVertex) {
 	struct VertexTextured* v = (struct VertexTextured*)gfx_vertices + startVertex;
 	qword_t* base = q;
 	q += COUNT_REGLIST_HDR; // skip over GIF tag (will be filled in later)
@@ -1165,9 +1166,9 @@ static qword_t* DrawTexturedTriangles(qword_t* q, int verticesCount, int startVe
 	u64* beg = dw;
 	VU0_vector tmp[6];
 
-	for (int i = 0; i < verticesCount / 4; i++, v += 4)
+	for (int i = 0; i < quadsCount; i++, v += 4)
 	{
-		dw = DrawTexturedQuad(v, dw, tmp);
+		dw = DrawTexturedQuad2D(v, dw, tmp);
 	}
 
 	unsigned numVerts = (unsigned)(dw - beg) / 3;
@@ -1181,7 +1182,32 @@ static qword_t* DrawTexturedTriangles(qword_t* q, int verticesCount, int startVe
 	return (qword_t*)dw;
 }
 
-static qword_t* DrawColouredTriangles(qword_t* q, int verticesCount, int startVertex) {
+static qword_t* DrawTexturedTriangles3D(qword_t* q, int quadsCount, int startVertex) {
+	struct VertexTextured* v = (struct VertexTextured*)gfx_vertices + startVertex;
+	qword_t* base = q;
+	q += COUNT_REGLIST_HDR; // skip over GIF tag (will be filled in later)
+
+	u64* dw  = (u64*)q;
+	u64* beg = dw;
+	VU0_vector tmp[6];
+
+	for (int i = 0; i < quadsCount; i++, v += 4)
+	{
+		dw = DrawTexturedQuad3D(v, dw, tmp);
+	}
+
+	unsigned numVerts = (unsigned)(dw - beg) / 3;
+	if (numVerts == 0) return base; // No vertices
+	if (numVerts & 1) dw++; // one more to even out number of doublewords
+
+	// Fill GIF tag in now that know number of GIF "primitives" (aka vertices)
+	// 3 registers per GIF "primitive" (colour, texture, position)
+	PACK_REGLIST_HDR(base, numVerts, true, 3, REGLIST_RGBAQ_ST_XYZ)
+
+	return (qword_t*)dw;
+}
+
+static qword_t* DrawColouredTriangles3D(qword_t* q, int quadsCount, int startVertex) {
 	struct VertexColoured* v = (struct VertexColoured*)gfx_vertices + startVertex;
 	qword_t* base = q;
 	q += COUNT_REGLIST_HDR; // skip over GIF tag (will be filled in later)
@@ -1190,9 +1216,9 @@ static qword_t* DrawColouredTriangles(qword_t* q, int verticesCount, int startVe
 	u64* beg = dw;
 	VU0_vector tmp[6];
 
-	for (int i = 0; i < verticesCount / 4; i++, v += 4)
+	for (int i = 0; i < quadsCount; i++, v += 4)
 	{
-		dw = DrawColouredQuad(v, dw, tmp);
+		dw = DrawColouredQuad3D(v, dw, tmp);
 	}
 
 	unsigned numVerts = (unsigned)(dw - beg) / 2;
@@ -1219,10 +1245,12 @@ static void DrawTriangles(int verticesCount, int startVertex) {
 	{
 		int count = min(32000, verticesCount);
 
-		if (gfx_format == VERTEX_FORMAT_COLOURED) {
-			Q = DrawColouredTriangles(Q, count, startVertex);
+		if (gfx_format == VERTEX_FORMAT_TEXTURED && gfx_rendering2D) {
+			Q = DrawTexturedTriangles2D(Q, count / 4, startVertex);
+		} else if (gfx_format == VERTEX_FORMAT_TEXTURED) {
+			Q = DrawTexturedTriangles3D(Q, count / 4, startVertex);
 		} else {
-			Q = DrawTexturedTriangles(Q, count, startVertex);
+			Q = DrawColouredTriangles3D(Q, count / 4, startVertex);
 		}
 		verticesCount -= count; startVertex += count;
 	}
