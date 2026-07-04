@@ -9,17 +9,17 @@
 // https://github.com/ps2dev/binutils-gdb/blob/e9cf3691bfa140469d52815a2307b00eecf7917c/gas/config/tc-mips.c#L2786
 
 # transform temp registers
-	#define POSCL $vf10 // TRANSFORMED(POS_[1234]) * CLIP_PLANES_ADJUST
-	#define POS_1 $vf11 // vertex 1 position
-	#define POS_2 $vf12 // vertex 2 position
-	#define POS_3 $vf13 // vertex 3 position
-	#define POS_4 $vf14 // vertex 4 position
+	#define POSCL $vf27 // TRANSFORMED(POS_[1234]) * CLIP_PLANES_ADJUST
+	#define POS_1 $vf28 // vertex 1 position
+	#define POS_2 $vf29 // vertex 2 position
+	#define POS_3 $vf30 // vertex 3 position
+	#define POS_4 $vf31 // vertex 4 position
 
 	#define _one   $vf0w
-	#define POS1w $vf11w
-	#define POS2w $vf12w
-	#define POS3w $vf13w
-	#define POS4w $vf14w
+	#define POS1w $vf28w
+	#define POS2w $vf29w
+	#define POS3w $vf30w
+	#define POS4w $vf31w
 
 	#define SRC $a0
 	#define DST $a1
@@ -99,17 +99,12 @@ BEG_FUNC(DrawTexturedQuad)
 	BeginClip POS_1
 
 ### VERTEX 2 ###
-	# LOAD VERTEX 2 (todo rearrange vertices for efficient loading)
-	ld			$t0,0x18(SRC) # t0 = src[1].x,y
-	sd			$t0,0x00(TMP) # tmp.x,y = t0
-	lw			$t0,0x20(SRC) # t0 = src[1].z
-	sw			$t0,0x08(TMP) # tmp.z = t0
-	lqc2		POS_2, 0x00(TMP) # V2 = tmp
+	lqc2		POS_2, 0x20(SRC)
 
 	TransformVertex POS_2
-	lwc1		COL2,  0x24(SRC)
-	lwc1		U_2,   0x28(SRC)
-	lwc1		V_2,   0x2C(SRC)
+	lwc1		COL2,  0x2C(SRC)
+	lwc1		U_2,   0x18(SRC)
+	lwc1		V_2,   0x1C(SRC)
 
 	vmulq.w 	POS_1, V0001, $Q
 	vdiv	 	$Q,    _one, POS2w
@@ -128,17 +123,12 @@ BEG_FUNC(DrawTexturedQuad)
 	BeginClip POS_3
 
 ### VERTEX 4 ###
-	# LOAD VERTEX 4
-	ld			$t0,0x48(SRC) # t0 = src[3].x,y
-	sd			$t0,0x00(TMP) # tmp.x,y = t0
-	lw			$t0,0x50(SRC) # t0 = src[3].z
-	sw			$t0,0x08(TMP) # tmp.z = t0
-	lqc2		POS_4, 0x00(TMP) # V4 = tmp
+	lqc2		POS_4, 0x50(SRC)
 
 	TransformVertex POS_4
-	lwc1		COL4,  0x54(SRC)
-	lwc1		U_4,   0x58(SRC)
-	lwc1		V_4,   0x5C(SRC)
+	lwc1		COL4,  0x5C(SRC)
+	lwc1		U_4,   0x48(SRC)
+	lwc1		V_4,   0x4C(SRC)
 
 	vmulq.w 	POS_3, V0001, $Q
 	vdiv 		$Q,    _one, POS4w

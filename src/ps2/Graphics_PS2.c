@@ -972,13 +972,35 @@ static CC_INLINE PackedCol PackTexturedColor(PackedCol color) {
 	return (color & ~PACKEDCOL_A_MASK) | (A << PACKEDCOL_A_SHIFT);
 }
 
+// slightly reordered form of second vertex, that aligns pos to 16 bytes for both vertices
+struct PS2SwappedVertex {
+	float u, v, x, y, z; PackedCol c;
+};
+union PS2Vertex {
+	struct VertexTextured v;
+	struct PS2SwappedVertex s;
+};
+
 static void PreprocessTexturedVertices(void* vertices) {
-    struct VertexTextured* v = vertices;
+    union PS2Vertex* v = vertices;
 	int count = buf_count;
 
     for (int i = 0; i < count; i++, v++)
     {
-		v->Col = PackTexturedColor(v->Col);
+		v->v.Col = PackTexturedColor(v->v.Col);
+		if ((i & 1) == 0) continue;
+
+		// rearrange vertex #2 fields so order ends up as
+		// 0x00: x1 y1 z1 c1
+		// 0x10: u1 v1 u2 v2
+		// 0x20: x2 y2 z2 c2
+		float x2 = v->v.x, y2 = v->v.y, z2 = v->v.z;
+		PackedCol c2 = v->v.Col;
+		float u2 = v->v.U, v2 = v->v.V;
+
+		v->s.u = u2; v->s.v = v2;
+		v->s.x = x2; v->s.y = y2; v->s.z = z2;
+		v->s.c = c2;
     }
 }
 

@@ -170,12 +170,12 @@ cc_string args[GAME_MAX_CMDARGS];
 	struct ResumeInfo r;
 	cc_string host;
 
-#ifdef _MSC_VER
+//#ifdef _MSC_VER
 	/* NOTE: Make sure to comment this out before pushing a commit */
 	//cc_string rawArgs = String_FromConst("UnknownShadow200 fffff 127.0.0.1 25565");
-	//cc_string rawArgs = String_FromConst("UnknownShadow200"); 
-	//argsCount = String_UNSAFE_Split(&rawArgs, ' ', args, 4);
-#endif
+	cc_string rawArgs = String_FromConst("UnknownShadow200"); 
+	argsCount = String_UNSAFE_Split(&rawArgs, ' ', args, 4);
+//#endif
 
 	if (argsCount == 0)
 		return ARG_RESULT_RUN_LAUNCHER;

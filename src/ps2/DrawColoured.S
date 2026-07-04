@@ -10,17 +10,17 @@
 // https://github.com/ps2dev/binutils-gdb/blob/e9cf3691bfa140469d52815a2307b00eecf7917c/gas/config/tc-mips.c#L2786
 
 # transform temp registers
-	#define POSCL $vf10 // TRANSFORMED(POS_[1234]) * CLIP_PLANES_ADJUST
-	#define POS_1 $vf11 // vertex 1 position
-	#define POS_2 $vf12 // vertex 2 position
-	#define POS_3 $vf13 // vertex 3 position
-	#define POS_4 $vf14 // vertex 4 position
+	#define POSCL $vf27 // TRANSFORMED(POS_[1234]) * CLIP_PLANES_ADJUST
+	#define POS_1 $vf28 // vertex 1 position
+	#define POS_2 $vf29 // vertex 2 position
+	#define POS_3 $vf30 // vertex 3 position
+	#define POS_4 $vf31 // vertex 4 position
 
 	#define _one   $vf0w
-	#define POS1w $vf11w
-	#define POS2w $vf12w
-	#define POS3w $vf13w
-	#define POS4w $vf14w
+	#define POS1w $vf28w
+	#define POS2w $vf29w
+	#define POS3w $vf30w
+	#define POS4w $vf31w
 
 	#define SRC $a0
 	#define DST $a1
