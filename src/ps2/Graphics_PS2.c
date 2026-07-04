@@ -1153,9 +1153,9 @@ void Gfx_SetVertexFormat(VertexFormat fmt) {
 	formatDirty = true;
 }
 
-extern u64* DrawTexturedQuad2D(void* src, u64* dst, VU0_vector* tmp);
-extern u64* DrawTexturedQuad3D(void* src, u64* dst, VU0_vector* tmp);
-extern u64* DrawColouredQuad3D(void* src, u64* dst, VU0_vector* tmp);
+extern u64* DrawTexturedQuad2D(void* src, u64* dst, VU0_vector* tmp, int count);
+extern u64* DrawTexturedQuad3D(void* src, u64* dst, VU0_vector* tmp, int count);
+extern u64* DrawColouredQuad3D(void* src, u64* dst, VU0_vector* tmp, int count);
 
 static qword_t* DrawTexturedTriangles2D(qword_t* q, int quadsCount, int startVertex) {
 	struct VertexTextured* v = (struct VertexTextured*)gfx_vertices + startVertex;
@@ -1166,14 +1166,8 @@ static qword_t* DrawTexturedTriangles2D(qword_t* q, int quadsCount, int startVer
 	u64* beg = dw;
 	VU0_vector tmp[6];
 
-	for (int i = 0; i < quadsCount; i++, v += 4)
-	{
-		dw = DrawTexturedQuad2D(v, dw, tmp);
-	}
-
+	dw = DrawTexturedQuad2D(v, dw, tmp, quadsCount);
 	unsigned numVerts = (unsigned)(dw - beg) / 3;
-	if (numVerts == 0) return base; // No vertices
-	if (numVerts & 1) dw++; // one more to even out number of doublewords
 
 	// Fill GIF tag in now that know number of GIF "primitives" (aka vertices)
 	// 3 registers per GIF "primitive" (colour, texture, position)
@@ -1191,14 +1185,9 @@ static qword_t* DrawTexturedTriangles3D(qword_t* q, int quadsCount, int startVer
 	u64* beg = dw;
 	VU0_vector tmp[6];
 
-	for (int i = 0; i < quadsCount; i++, v += 4)
-	{
-		dw = DrawTexturedQuad3D(v, dw, tmp);
-	}
-
+	dw = DrawTexturedQuad3D(v, dw, tmp, quadsCount);
 	unsigned numVerts = (unsigned)(dw - beg) / 3;
 	if (numVerts == 0) return base; // No vertices
-	if (numVerts & 1) dw++; // one more to even out number of doublewords
 
 	// Fill GIF tag in now that know number of GIF "primitives" (aka vertices)
 	// 3 registers per GIF "primitive" (colour, texture, position)
@@ -1216,11 +1205,7 @@ static qword_t* DrawColouredTriangles3D(qword_t* q, int quadsCount, int startVer
 	u64* beg = dw;
 	VU0_vector tmp[6];
 
-	for (int i = 0; i < quadsCount; i++, v += 4)
-	{
-		dw = DrawColouredQuad3D(v, dw, tmp);
-	}
-
+	dw = DrawColouredQuad3D(v, dw, tmp, quadsCount);
 	unsigned numVerts = (unsigned)(dw - beg) / 2;
 	if (numVerts == 0) return base; // No vertices
 

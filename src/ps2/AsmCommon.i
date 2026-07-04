@@ -39,6 +39,12 @@
 #define PCOL_XY  8
 #define PCOL__Z 12
 
+// ===============================
+// VERTEX STRUCT SIZES
+// ===============================
+#define S_VCOL 16
+#define S_VTEX 24
+
 
 // ===============================
 // POLY STRUCT SIZES

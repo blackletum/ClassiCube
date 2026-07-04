@@ -12,6 +12,7 @@
 	#define SRC $a0
 	#define DST $a1
 	#define TMP $a2
+	#define CNT $a3
 
 	#define Z_1 $f0
 	#define Z_2 $f1
@@ -38,10 +39,10 @@
 	#define W_3 $f18
 	#define W_4 $f19
 
-	#define XY_1 $t1
-	#define XY_2 $t2
-	#define XY_3 $t3
-	#define XY_4 $a3
+	#define XY_1 $t0
+	#define XY_2 $t1
+	#define XY_3 $t2
+	#define XY_4 $t3
 
 	#define Y_1 $a4
 	#define Y_2 $a5
@@ -107,6 +108,9 @@ BEG_FUNC(DrawTexturedQuad2D)
 	VPTransform POS_2
 	VPTransform POS_3
 	VPTransform POS_4
+
+	addi SRC, 4 * S_VTEX
+	addi CNT, -1
 
 	# Convert to register format
 	sqc2		POS_1, 0x00(TMP)
@@ -187,6 +191,7 @@ BEG_FUNC(DrawTexturedQuad2D)
 	sw   XY_1, (5*S_PTEX + PTEX_XY)(DST)
 	swc1  Z_1, (5*S_PTEX + PTEX__Z)(DST)
 
+	bnez CNT, DrawTexturedQuad2D
 	addi DST, 6 * S_PTEX
 
 	jr $ra

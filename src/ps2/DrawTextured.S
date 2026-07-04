@@ -24,6 +24,7 @@
 	#define SRC $a0
 	#define DST $a1
 	#define TMP $a2
+	#define CNT $a3
 
 	#define Z_1 $f0
 	#define Z_2 $f1
@@ -50,10 +51,10 @@
 	#define W_3 $f18
 	#define W_4 $f19
 
-	#define XY_1 $t1
-	#define XY_2 $t2
-	#define XY_3 $t3
-	#define XY_4 $a3
+	#define XY_1 $t0
+	#define XY_2 $t1
+	#define XY_3 $t2
+	#define XY_4 $t3
 
 	#define Y_1 $a4
 	#define Y_2 $a5
@@ -134,8 +135,8 @@ BEG_FUNC(DrawTexturedQuad3D)
 	vdiv 		$Q,    _one, POS4w
 	BeginClip POS_4
 
-	vnop # adjust for delay
-	vnop # adjust for delay
+	addi SRC, 4 * S_VTEX
+	addi CNT, -1
 	vnop # adjust for delay
 
 	# STORE CLIP FLAGS 4 RESULT
@@ -240,10 +241,14 @@ BEG_FUNC(DrawTexturedQuad3D)
 	sw   XY_1, (5*S_PTEX + PTEX_XY)(DST)
 	swc1  Z_1, (5*S_PTEX + PTEX__Z)(DST)
 
+	bnez CNT, DrawTexturedQuad3D
 	addi DST, 6 * S_PTEX
 
 	# TODO clipping
 any_clipped_vertices:
+	bnez CNT, DrawTexturedQuad3D
+	nop
+
 	jr $ra
 	move $v0, DST
 END_FUNC(DrawTexturedQuad3D)
